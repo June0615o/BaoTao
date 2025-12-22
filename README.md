@@ -49,7 +49,7 @@
 1. 创建数据库：
 
 ```sql
-CREATE DATABASE baotao CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE baotaodb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 2. 根据实际环境修改 `src/main/resources/application.properties` 中的：
