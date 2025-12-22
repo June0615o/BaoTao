@@ -10,8 +10,9 @@
     <el-col :span="12">
       <h3>热销商品 Top</h3>
       <el-table :data="topProducts" size="small">
-        <el-table-column prop="productId" label="商品ID" />
-        <el-table-column prop="quantity" label="销量" />
+        <el-table-column prop="productId" label="商品ID" width="100" />
+        <el-table-column prop="productName" label="商品名称" />
+        <el-table-column prop="quantity" label="销量" width="100" />
       </el-table>
     </el-col>
   </el-row>
@@ -28,6 +29,7 @@ interface SalesByDay {
 
 interface TopProduct {
   productId: number;
+  productName: string;
   quantity: number;
 }
 

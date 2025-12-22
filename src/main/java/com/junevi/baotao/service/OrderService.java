@@ -4,6 +4,7 @@ import com.junevi.baotao.domain.*;
 import com.junevi.baotao.repository.CartItemRepository;
 import com.junevi.baotao.repository.OrderItemRepository;
 import com.junevi.baotao.repository.OrderRepository;
+import com.junevi.baotao.repository.ProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -12,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class OrderService {
@@ -20,16 +23,22 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final CartItemRepository cartItemRepository;
+    private final ProductRepository productRepository;
     private final MailService mailService;
+    private final BrowseLogService browseLogService;
 
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         CartItemRepository cartItemRepository,
-                        MailService mailService) {
+                        ProductRepository productRepository,
+                        MailService mailService,
+                        BrowseLogService browseLogService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartItemRepository = cartItemRepository;
+        this.productRepository = productRepository;
         this.mailService = mailService;
+        this.browseLogService = browseLogService;
     }
 
     public Page<Order> listOrdersForUser(User user, int page, int size) {
@@ -59,6 +68,30 @@ public class OrderService {
             throw new IllegalStateException("购物车为空");
         }
 
+        // 先按商品汇总数量并原子扣减库存（避免并发超卖）
+        Map<Long, Integer> qtyByProductId = new HashMap<Long, Integer>();
+        for (CartItem cartItem : cartItems) {
+            if (cartItem.getQuantity() == null || cartItem.getQuantity() <= 0) {
+                throw new IllegalArgumentException("购物车商品数量不合法");
+            }
+            if (cartItem.getProduct() == null || cartItem.getProduct().getId() == null) {
+                throw new IllegalStateException("购物车商品不存在");
+            }
+            Long pid = cartItem.getProduct().getId();
+            int current = qtyByProductId.containsKey(pid) ? qtyByProductId.get(pid) : 0;
+            qtyByProductId.put(pid, current + cartItem.getQuantity());
+        }
+        for (Map.Entry<Long, Integer> entry : qtyByProductId.entrySet()) {
+            Long productId = entry.getKey();
+            Integer qty = entry.getValue();
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
+            int updated = productRepository.decreaseStockIfEnough(productId, qty);
+            if (updated == 0) {
+                throw new IllegalStateException("库存不足：" + product.getName());
+            }
+        }
+
         Order order = new Order();
         order.setUser(user);
         order.setStatus(OrderStatus.PAID);
@@ -76,6 +109,9 @@ public class OrderService {
             BigDecimal line = cartItem.getProduct().getPrice()
                     .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
             total = total.add(line);
+
+            // 记录购买日志
+            browseLogService.logBuy(user, cartItem.getProduct());
         }
         order.setTotalAmount(total);
         order = orderRepository.save(order);

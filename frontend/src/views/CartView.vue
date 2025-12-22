@@ -77,7 +77,11 @@ async function checkout() {
     ElMessage.success('下单成功');
     router.push('/orders');
   } catch (e: any) {
-    ElMessage.error(e?.response?.data || '下单失败');
+    const msg =
+      e?.response?.data?.message ||
+      (typeof e?.response?.data === 'string' ? e.response.data : '') ||
+      '下单失败';
+    ElMessage.error(msg);
   }
 }
 

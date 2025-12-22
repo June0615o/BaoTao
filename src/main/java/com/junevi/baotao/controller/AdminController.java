@@ -128,18 +128,30 @@ public class AdminController {
     public List<Map<String, Object>> topProducts(@RequestParam(value = "limit", defaultValue = "5") int limit) {
         List<Order> allOrders = orderService.listAllOrders(0, Integer.MAX_VALUE).getContent();
         Map<Long, Integer> countMap = new HashMap<Long, Integer>();
+        Map<Long, String> nameMap = new HashMap<Long, String>();
         for (Order order : allOrders) {
+            if (order.getItems() == null) {
+                continue;
+            }
             for (OrderItem item : order.getItems()) {
+                if (item.getProduct() == null) {
+                    continue;
+                }
                 Long pid = item.getProduct().getId();
                 int qty = countMap.containsKey(pid) ? countMap.get(pid) : 0;
                 qty += item.getQuantity();
                 countMap.put(pid, qty);
+                if (!nameMap.containsKey(pid)) {
+                    nameMap.put(pid, item.getProduct().getName());
+                }
             }
         }
         List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
         for (Map.Entry<Long, Integer> entry : countMap.entrySet()) {
             Map<String, Object> row = new HashMap<String, Object>();
-            row.put("productId", entry.getKey());
+            Long pid = entry.getKey();
+            row.put("productId", pid);
+            row.put("productName", nameMap.get(pid));
             row.put("quantity", entry.getValue());
             result.add(row);
         }

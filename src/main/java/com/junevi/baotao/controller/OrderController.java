@@ -1,7 +1,6 @@
 package com.junevi.baotao.controller;
 
 import com.junevi.baotao.domain.Order;
-import com.junevi.baotao.domain.Product;
 import com.junevi.baotao.domain.User;
 import com.junevi.baotao.service.BrowseLogService;
 import com.junevi.baotao.service.OrderService;
@@ -17,14 +16,12 @@ public class OrderController {
 
     private final OrderService orderService;
     private final UserService userService;
-    private final BrowseLogService browseLogService;
 
     public OrderController(OrderService orderService,
                            UserService userService,
                            BrowseLogService browseLogService) {
         this.orderService = orderService;
         this.userService = userService;
-        this.browseLogService = browseLogService;
     }
 
     private User currentUser(Authentication authentication) {
@@ -59,10 +56,6 @@ public class OrderController {
     public ResponseEntity<Order> checkout(Authentication authentication) {
         User user = currentUser(authentication);
         Order order = orderService.checkout(user);
-        // 为该订单中的商品记录购买日志
-        for (Product product : order.getItems().stream().map(i -> i.getProduct()).toArray(Product[]::new)) {
-            browseLogService.logBuy(user, product);
-        }
         return ResponseEntity.ok(order);
     }
 }
