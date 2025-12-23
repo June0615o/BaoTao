@@ -87,15 +87,21 @@ npm run dev
 
 确保本机已安装 Docker 与 docker-compose。
 
+如果你所在网络访问 Docker Hub 不稳定/被限制，可以先在 `.env` 中把：
+
+- `BASE_REGISTRY` 改成可用的镜像站（例如 `registry.cn-hangzhou.aliyuncs.com`）
+- `MYSQL_IMAGE` 改成对应镜像（例如 `registry.cn-hangzhou.aliyuncs.com/library/mysql:8.0`）
+
 ```bash
 # 在项目根目录
-docker-compose build
-docker-compose up -d
+copy env.example .env
+docker compose -f docker-compose.yml -f docker-compose.build.yml build
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
 ```
 
 容器说明：
 
-- `baotao-mysql`：MySQL 数据库（端口 `3306`）
+- `baotao-mysql`：MySQL 数据库（容器内网端口 `3306`，默认不对宿主机暴露）
 - `baotao-backend`：Spring Boot 后端（端口 `8080`）
 - `baotao-frontend`：前端 Nginx 容器（端口 `80`）
 
@@ -106,32 +112,78 @@ docker-compose up -d
 
 ---
 
-### 在华为云 CentOS 8 上的部署步骤（简要）
+### 在华为云 CentOS 8 上的部署步骤（推荐：镜像仓库 pull 部署）
 
-1. **安装 Docker（若尚未安装）**  
-   按官方文档安装 Docker Engine，并配置开机自启。
+核心思路是：**你在 Win11 本地构建并 push 镜像**，云服务器只负责 **pull 镜像并 docker compose up**，这样部署速度更快、也不需要服务器具备完整的构建环境。
 
-2. **安装 docker-compose（插件或独立二进制）**
+#### 0）前置：准备镜像仓库
 
-3. **获取代码**
+- 任选一个镜像仓库：
+  - Docker Hub（最简单）
+  - GHCR（GitHub Container Registry）
+- 在 `env.example` 里把下面两项改成你的仓库地址，然后复制成 `.env`：
+  - `BAOTAO_BACKEND_IMAGE=...`
+  - `BAOTAO_FRONTEND_IMAGE=...`
+
+#### 1）Win11 本地：build + push 镜像
+
+在项目根目录执行（PowerShell / CMD 都可以）：
+
+```bash
+copy env.example .env
+docker login
+docker compose -f docker-compose.yml -f docker-compose.build.yml build
+docker compose -f docker-compose.yml -f docker-compose.build.yml push
+```
+
+> 说明：`docker-compose.yml` 负责“运行参数”（端口、环境变量、依赖关系），`docker-compose.build.yml` 只负责 “build 指令”。  
+> push 完成后，你的云服务器就能直接 `pull` 到同样的镜像。
+
+#### 2）CentOS 8 服务器：安装 Docker + Compose 插件
+
+下面命令按官方仓库安装（CentOS 8）：
+
+```bash
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo systemctl enable --now docker
+docker compose version
+```
+
+#### 3）CentOS 8 服务器：拉代码（或仅拷贝 compose 文件）并启动
 
 ```bash
 git clone <你的仓库地址> baotao
 cd baotao
+cp env.example .env
+vi .env   # 把镜像名、MYSQL_ROOT_PASSWORD 等改成与你本地 push 的一致
+
+docker login
+docker compose pull
+docker compose up -d
+docker compose ps
 ```
 
-4. **构建并启动**
+#### 4）华为云安全组/防火墙放行端口（公网可访问）
+
+- 必开：`80/tcp`（访问前端入口，Nginx 会反代 `/api` 到后端）
+- 可选：`8080/tcp`（一般不建议对公网开放；调试时才临时开放）
+- 不建议公网开放：`3306/tcp`（数据库应仅容器内网访问）
+
+CentOS 防火墙（若开启了 firewalld）：
 
 ```bash
-docker-compose build
-docker-compose up -d
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
 ```
 
-5. **在华为云控制台开放端口**  
-   在安全组中放通 `80`（HTTP）与需要的端口（如 `8080` 或 `3306` 仅限内网）。
+#### 5）公网访问验证
 
-6. **通过公网访问**  
-   在浏览器中访问：`http://你的云服务器公网IP/`，使用测试账号登录并验证功能。
+- 浏览器访问：`http://你的云服务器公网IP/`
+- API（可选）：`http://你的云服务器公网IP/api/products`
+
+> 如果你后续要绑定域名并上 HTTPS，建议在前端容器前再加一层反向代理（例如 Caddy / Nginx）自动签发证书；当前项目用 `80` 直出也能满足“公网可访问”的课程要求。
 
 以上步骤和结果可以整理到实验报告的“应用部署”部分，并附上关键命令和截图。
 

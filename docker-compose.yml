@@ -1,42 +1,42 @@
-version: '3.8'
-
 services:
   db:
-    image: mysql:8.0
+    image: ${MYSQL_IMAGE:-mysql:8.0}
     container_name: baotao-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: baotao
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-baotao}
       TZ: Asia/Shanghai
-    ports:
-      - "3306:3306"
     volumes:
       - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
+    image: ${BAOTAO_BACKEND_IMAGE:-baotao-backend:local}
     container_name: baotao-backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/baotao?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      BAOTAO_DATASOURCE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-baotao}?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+      BAOTAO_DATASOURCE_USERNAME: root
+      BAOTAO_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
+    restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.frontend
+    image: ${BAOTAO_FRONTEND_IMAGE:-baotao-frontend:local}
     container_name: baotao-frontend
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "${FRONTEND_PORT:-80}:80"
+    restart: unless-stopped
 
 volumes:
   db-data:

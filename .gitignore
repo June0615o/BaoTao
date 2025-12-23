@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# dotenv（compose 环境变量）
+.env
+
+# frontend build artifacts
+frontend/node_modules/
+frontend/dist/
