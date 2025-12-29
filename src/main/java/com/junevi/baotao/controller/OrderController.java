@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/orders")
+/**
+ * 订单接口：查询订单、查看订单详情、购物车结算生成订单等。
+ */
 public class OrderController {
 
     private final OrderService orderService;
@@ -53,6 +56,15 @@ public class OrderController {
     }
 
     @PostMapping("/checkout")
+    /**
+     * 从当前登录用户的购物车结算下单。
+     *
+     * <p>失败场景：</p>
+     * <ul>
+     *   <li>购物车为空：409</li>
+     *   <li>库存不足：409</li>
+     * </ul>
+     */
     public ResponseEntity<Order> checkout(Authentication authentication) {
         User user = currentUser(authentication);
         Order order = orderService.checkout(user);

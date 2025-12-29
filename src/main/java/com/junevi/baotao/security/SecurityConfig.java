@@ -19,6 +19,17 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
+/**
+ * Spring Security 配置：采用 JWT 无状态认证。
+ *
+ * <p>约定：</p>
+ * <ul>
+ *   <li>/api/auth/**：注册/登录等公开接口</li>
+ *   <li>GET /api/products/**：商品浏览公开接口</li>
+ *   <li>/api/admin/**：管理员接口（ROLE_ADMIN）</li>
+ *   <li>其他接口：必须携带 JWT</li>
+ * </ul>
+ */
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final UserDetailsService userDetailsService;

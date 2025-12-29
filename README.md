@@ -14,6 +14,23 @@
 
 ---
 
+### 代码结构说明（关键模块）
+
+- **后端（Spring Boot）**
+  - `src/main/java/com/junevi/baotao/controller/`：REST API（认证、商品、购物车、订单、管理员）
+  - `src/main/java/com/junevi/baotao/service/`：业务逻辑（购物车、下单扣库存、统计、邮件、日志）
+  - `src/main/java/com/junevi/baotao/repository/`：JPA 数据访问（User/Product/Order/CartItem 等）
+  - `src/main/java/com/junevi/baotao/security/`：JWT 工具、过滤器与权限控制配置
+  - `src/main/java/com/junevi/baotao/domain/`：实体类（用户、商品、订单、浏览日志等）
+  - `src/main/resources/application.properties`：默认配置（数据源使用环境变量注入）
+
+- **前端（Vue3 + Vite）**
+  - `frontend/src/views/`：页面（顾客端与管理员端）
+  - `frontend/src/api/http.ts`：Axios 封装（baseURL=/api + 自动带 JWT）
+  - `frontend/nginx.conf`：生产部署 Nginx 反代配置（/api → backend:8080）
+
+说明：关键业务/安全代码已补充必要的 Javadoc/行内注释，便于课程实验检查与二次维护。
+
 ### 功能概览
 
 - 顾客：

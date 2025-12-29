@@ -18,6 +18,11 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+/**
+ * 订单业务：下单结算、订单查询、订单状态更新等。
+ *
+ * <p>结算（checkout）必须在事务中完成，确保：扣库存、写订单、清空购物车要么全部成功，要么全部回滚。</p>
+ */
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -62,6 +67,16 @@ public class OrderService {
     }
 
     @Transactional
+    /**
+     * 从用户购物车结算生成订单。
+     *
+     * <p>关键点：</p>
+     * <ul>
+     *   <li>先按商品汇总数量，并使用“带条件的原子更新”扣减库存，避免并发超卖。</li>
+     *   <li>库存不足时抛出 {@link IllegalStateException}，由全局异常处理返回 409(CONFLICT)。</li>
+     *   <li>事务内完成写订单、写明细、清空购物车。</li>
+     * </ul>
+     */
     public Order checkout(User user) {
         List<CartItem> cartItems = cartItemRepository.findByUser(user);
         if (cartItems.isEmpty()) {

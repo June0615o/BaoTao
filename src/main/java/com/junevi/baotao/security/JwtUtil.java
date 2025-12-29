@@ -8,6 +8,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * JWT 工具类：生成/解析 Token，并从 Token 中提取用户名与角色。
+ *
+ * <p>说明：课程项目中为简化演示将密钥写在代码中；生产环境应改为从环境变量或配置中心读取，并定期轮换。</p>
+ */
 public class JwtUtil {
 
     // 简化起见，密钥写在代码中；实际生产应放到配置中
